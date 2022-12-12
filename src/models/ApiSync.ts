@@ -19,7 +19,7 @@ export class ApiSync<T extends HasId> {
 			);
 		} else {
 			return axios.post(
-				`${this.rootUrl}/${id}
+				`${this.rootUrl}
 			`,
 				data
 			);

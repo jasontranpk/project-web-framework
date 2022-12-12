@@ -532,18 +532,20 @@ function hmrAcceptRun(bundle, id) {
 }
 
 },{}],"h7u1C":[function(require,module,exports) {
+var _userEdit = require("./views/UserEdit");
 var _user = require("./models/User");
 const user = (0, _user.User).buildUser({
-    id: 1,
-    name: "new newer name",
+    name: "Name",
     age: 20
 });
-user.on("save", ()=>{
-    console.log(user);
-});
-user.save();
+const root = document.getElementById("root");
+if (root) {
+    const userEdit = new (0, _userEdit.UserEdit)(root, user);
+    userEdit.render();
+    console.log(userEdit);
+} else throw new Error("root element not found");
 
-},{"./models/User":"4rcHn"}],"4rcHn":[function(require,module,exports) {
+},{"./models/User":"4rcHn","./views/UserEdit":"3CihC"}],"4rcHn":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "User", ()=>User);
@@ -551,14 +553,57 @@ var _model = require("./Model");
 var _attributes = require("./Attributes");
 var _apiSync = require("./ApiSync");
 var _eventing = require("./Eventing");
+var _collection = require("./Collection");
 const rootUrl = "http://localhost:3000/users";
 class User extends (0, _model.Model) {
     static buildUser(attrs) {
         return new User(new (0, _attributes.Attributes)(attrs), new (0, _eventing.Eventing)(), new (0, _apiSync.ApiSync)(rootUrl));
     }
+    static buildUserCollection() {
+        return new (0, _collection.Collection)(rootUrl, (json)=>{
+            return User.buildUser(json);
+        });
+    }
+    setRandomAge() {
+        const age = Math.round(Math.random() * 100);
+        this.set({
+            age
+        });
+    }
 }
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"2oyJm","./Model":"f033k","./Attributes":"6Bbds","./ApiSync":"3wylh","./Eventing":"7459s"}],"2oyJm":[function(require,module,exports) {
+},{"./Model":"f033k","./Attributes":"6Bbds","./ApiSync":"3wylh","./Eventing":"7459s","./Collection":"dD11O","@parcel/transformer-js/src/esmodule-helpers.js":"2oyJm"}],"f033k":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "Model", ()=>Model);
+class Model {
+    constructor(attributes, events, sync){
+        this.attributes = attributes;
+        this.events = events;
+        this.sync = sync;
+        this.on = this.events.on;
+        this.trigger = this.events.trigger;
+        this.get = this.attributes.get;
+    }
+    set(update) {
+        this.attributes.set(update);
+        this.events.trigger("change");
+    }
+    fetch() {
+        const id = this.attributes.get("id");
+        if (typeof id !== "number") throw new Error("Cannot fetch without an id");
+        this.sync.fetch(id).then((response)=>{
+            this.set(response.data);
+        });
+    }
+    save() {
+        this.sync.save(this.attributes.getAll()).then((response)=>{
+            this.trigger("save");
+        }).catch(()=>this.trigger("error"));
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"2oyJm"}],"2oyJm":[function(require,module,exports) {
 exports.interopDefault = function(a) {
     return a && a.__esModule ? a : {
         default: a
@@ -588,44 +633,7 @@ exports.export = function(dest, destName, get) {
     });
 };
 
-},{}],"f033k":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "Model", ()=>Model);
-class Model {
-    constructor(attributes, events, sync){
-        this.attributes = attributes;
-        this.events = events;
-        this.sync = sync;
-    }
-    get on() {
-        return this.events.on;
-    }
-    get trigger() {
-        return this.events.trigger;
-    }
-    get get() {
-        return this.attributes.get;
-    }
-    set(update) {
-        this.attributes.set(update);
-        this.events.trigger("change");
-    }
-    fetch() {
-        const id = this.attributes.get("id");
-        if (typeof id !== "number") throw new Error("Cannot fetch without an id");
-        this.sync.fetch(id).then((response)=>{
-            this.set(response.data);
-        });
-    }
-    save() {
-        this.sync.save(this.attributes.getAll()).then((response)=>{
-            this.trigger("save");
-        }).catch(()=>this.trigger("error"));
-    }
-}
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"2oyJm"}],"6Bbds":[function(require,module,exports) {
+},{}],"6Bbds":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "Attributes", ()=>Attributes);
@@ -661,7 +669,7 @@ class ApiSync {
         const id = data.id;
         if (id) return (0, _axiosDefault.default).put(`${this.rootUrl}/${id}
 			`, data);
-        else return (0, _axiosDefault.default).post(`${this.rootUrl}/${id}
+        else return (0, _axiosDefault.default).post(`${this.rootUrl}
 			`, data);
     }
 }
@@ -4694,6 +4702,171 @@ class Eventing {
     };
 }
 
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"2oyJm"}]},["3hUIt","h7u1C"], "h7u1C", "parcelRequire0eb5")
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"2oyJm"}],"dD11O":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "Collection", ()=>Collection);
+var _axios = require("axios");
+var _axiosDefault = parcelHelpers.interopDefault(_axios);
+var _eventing = require("./Eventing");
+class Collection {
+    constructor(rootUrl, deserialize){
+        this.rootUrl = rootUrl;
+        this.deserialize = deserialize;
+        this.models = [];
+        this.events = new (0, _eventing.Eventing)();
+    }
+    get on() {
+        return this.events.on;
+    }
+    get trigger() {
+        return this.events.trigger;
+    }
+    fetch() {
+        (0, _axiosDefault.default).get(this.rootUrl).then((response)=>{
+            response.data.forEach((value)=>{
+                this.models.push(this.deserialize(value));
+            });
+        });
+        this.trigger("change");
+    }
+}
+
+},{"axios":"jo6P5","./Eventing":"7459s","@parcel/transformer-js/src/esmodule-helpers.js":"2oyJm"}],"3CihC":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "UserEdit", ()=>UserEdit);
+var _view = require("./View");
+var _userForm = require("./UserForm");
+var _userShow = require("./UserShow");
+class UserEdit extends (0, _view.View) {
+    regionsMap() {
+        return {
+            userShow: ".user-show",
+            userForm: ".user-form"
+        };
+    }
+    onRender = ()=>{
+        new (0, _userShow.UserShow)(this.regions.userShow, this.model).render();
+        new (0, _userForm.UserForm)(this.regions.userForm, this.model).render();
+    };
+    template() {
+        return `
+            <div>
+                <div class="user-show"></div>
+                <div class="user-form"></div>
+            </div> 
+        `;
+    }
+}
+
+},{"./View":"5Vo78","@parcel/transformer-js/src/esmodule-helpers.js":"2oyJm","./UserShow":"2Tlyi","./UserForm":"gXSLD"}],"5Vo78":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "View", ()=>View);
+class View {
+    constructor(parent, model){
+        this.parent = parent;
+        this.model = model;
+        this.regions = {};
+        this.onRender = ()=>{};
+        this.bindModel();
+    }
+    regionsMap() {
+        return {};
+    }
+    eventsMap() {
+        return {};
+    }
+    bindModel() {
+        this.model.on("change", ()=>{
+            this.render();
+        });
+    }
+    mapRegions(fragment) {
+        const regionsMap = this.regionsMap();
+        for(let key in regionsMap){
+            const selector = regionsMap[key];
+            const element = fragment.querySelector(selector);
+            if (element) this.regions[key] = element;
+        }
+    }
+    bindEvents(fragment) {
+        const eventsMap = this.eventsMap();
+        for(let eventKey in eventsMap){
+            const [eventName, selector] = eventKey.split(":");
+            fragment.querySelectorAll(selector).forEach((element)=>{
+                element.addEventListener(eventName, eventsMap[eventKey]);
+            });
+        }
+    }
+    render() {
+        this.parent.innerHTML = "";
+        const templateElement = document.createElement("template");
+        templateElement.innerHTML = this.template();
+        this.bindEvents(templateElement.content);
+        this.mapRegions(templateElement.content);
+        this.onRender();
+        this.parent.append(templateElement.content);
+    }
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"2oyJm"}],"2Tlyi":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "UserShow", ()=>UserShow);
+var _view = require("./View");
+class UserShow extends (0, _view.View) {
+    template() {
+        return `
+            <div>
+                <h1>User Detail</h1> 
+                <div>User Name: ${this.model.get("name")}</div>
+                <div>User Age: ${this.model.get("age")}</div>
+            </div> 
+        `;
+    }
+}
+
+},{"./View":"5Vo78","@parcel/transformer-js/src/esmodule-helpers.js":"2oyJm"}],"gXSLD":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "UserForm", ()=>UserForm);
+var _view = require("./View");
+class UserForm extends (0, _view.View) {
+    eventsMap() {
+        return {
+            "click:.set-age": this.onSetAgeClick,
+            "click:.change-name": this.onSetNameClick,
+            "click:.save-model": this.onSaveClick
+        };
+    }
+    onSetNameClick = ()=>{
+        const input = this.parent.querySelector("input");
+        const name = input.value;
+        this.model.set({
+            name
+        });
+    };
+    onSetAgeClick = ()=>{
+        this.model.setRandomAge();
+    };
+    onSaveClick = ()=>{
+        console.log("on save clicked");
+        this.model.save();
+    };
+    template() {
+        return `
+            <div>
+                <input placeHolder='${this.model.get("name")}' />
+                <button class='change-name'>Change name</button>
+                <button class='set-age'>Set Random Age</button>
+				<button class='save-model'>Save</button>
+            </div> 
+        `;
+    }
+}
+
+},{"./View":"5Vo78","@parcel/transformer-js/src/esmodule-helpers.js":"2oyJm"}]},["3hUIt","h7u1C"], "h7u1C", "parcelRequire0eb5")
 
 //# sourceMappingURL=index.b71e74eb.js.map
