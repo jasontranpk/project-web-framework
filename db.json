@@ -2,7 +2,8 @@
   "users": [
     {
       "id": 1,
-      "name": "super man"
+      "name": "new newer name",
+      "age": 20
     },
     {
       "name": "new record",

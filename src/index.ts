@@ -1,12 +1,9 @@
 import { User } from './models/User';
 
-const user = new User({ id: 1 });
+const user = User.buildUser({ id: 1, name: 'new newer name', age: 20 });
 
-user.set({ name: 'super man' });
-user.save();
-
-const newUser = new User({ name: 'new record', age: 0 });
-newUser.save();
-setTimeout(() => {
+user.on('save', () => {
 	console.log(user);
-}, 4000);
+});
+
+user.save();
